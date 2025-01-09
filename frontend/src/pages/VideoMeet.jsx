@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import io from "socket.io-client";
 import "../styles/videoComponent.css";
 import { Button, TextField } from '@mui/material';
 const server_url="http://localhost:8000";
@@ -14,7 +15,7 @@ export default function VideoMeetComponent() {
     let localVideoRef=useRef();
     let [videoAvailable,setVideoAvailable]=useState(true);
     let [audioAvailable,setAudioAvailable]=useState(true);
-    let [video,setVideo]=useState();
+    let [video,setVideo]=useState([]);
     let [audio,setAudio]=useState();
     let [screen,setScreen]=useState();
     let [showModal,setShowModal]=useState();
@@ -87,10 +88,33 @@ export default function VideoMeetComponent() {
             getUserMedia();
         }
     },[audio,video]);
+    let gotMessageFromServer=(fromId,message)=>{
+
+    }
+    let addMessage=()=>{
+
+    }
+    let connectToSocketServer=()=>{
+        socketRef.current=io.connect((server_url,{secure:false}));
+        socketRef.current.on('signal',gotMessageFromServer);
+        socketRef.current.on("connect",()=>{
+            socketRef.current.emit("join-call", window.location.href);
+            socketIdRef.current=socketRef.current.id;
+            socketRef.current.on("chat-messaage",addMessage);
+            socketRef.current.on("user-left",(id)=>{
+                setVideo((video)=>video.filter((video)=>video.socketId!==id))
+            })
+            socketRef.current.on("user-joined",(id,clients)=>{
+                clients.forEach((socketListId)=>{
+                    connections[socketListId]=new RTCPeerConnection(peerConfigConnections)
+                })
+            })
+        })
+    }
     let getMedia=()=>{
         setVideo(videoAvailable);
         setAudio(audioAvailable);
-        // connectToSocketServer();
+        connectToSocketServer();
     }
     let connect=()=>{
         setAskForUsername(false);
